@@ -22,4 +22,5 @@ model Session {
   id Int  @id @default(autoincrement())
   account Account @relation(fields: [accountId], references: [id])
   accountId String @unique
+  balance Int @default(10)
 }
