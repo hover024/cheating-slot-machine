@@ -1,0 +1,24 @@
+version: "3"
+
+services:
+  # express + prisma
+  backend:
+    build: backend
+    restart: always
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend/prisma:/app/prisma
+      - ./backend/src:/app/src
+      - ./sqlite-data:/app/prisma/data
+  # next app
+  frontend:
+    build: frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/app:/app/app
+      - ./frontend/lib:/app/lib
+      - ./frontend/public:/app/public
+      - ./frontend/styles:/app/styles
