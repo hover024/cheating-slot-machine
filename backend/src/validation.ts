@@ -18,7 +18,6 @@ export const validateAccountId = async (req: Request<{id: string}>, res: Respons
     return res.status(405).send({ error: "please specify correct account id" });
   }
 
-  // Убедимся, что session не null, а undefined
   req.account = {
     ...account,
     session: account.session ?? undefined
