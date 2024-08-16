@@ -2,8 +2,18 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    Fira Sans,
+    Droid Sans,
+    Helvetica Neue,
+    sans-serif;
 }
 
 a {
@@ -13,4 +23,29 @@ a {
 
 * {
   box-sizing: border-box;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(-80px * 6));
+  }
+}
+
+.transition {
+  animation: scroll 0.5s linear infinite;
+}
+
+.firstSlot {
+  transition-duration: 1s;
+}
+
+.secondSlot {
+  transition-duration: 2s;
+}
+
+.thirdSlot {
+  transition-duration: 3s;
 }

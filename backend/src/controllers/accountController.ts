@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const roll = async (sessionId: number, balance: number) => {
   if (balance <= 0) {
-    throw new BadRequestError("Insufficient balance");
+    throw new BadRequestError('Insufficient balance');
   }
 
   let newBalance = balance - 1;
@@ -48,13 +48,9 @@ export const getAccount = async (
   accountId: string,
   session?: { id: number; balance: number }
 ) => {
-  if (!session) {
-    throw new NotFoundError("No active session found");
-  }
-
   return {
     id: accountId,
-    sessionBalance: session.balance,
+    sessionBalance: session?.balance ?? 0,
     accountBalance: await getAccountBalance(accountId),
   };
 };
@@ -63,7 +59,7 @@ export const createSession = async (accountId: string, balance?: number) => {
   const account = await prisma.account.findUnique({ where: { id: accountId } });
 
   if (!account) {
-    throw new NotFoundError("Account not found");
+    throw new NotFoundError('Account not found');
   }
 
   const accountBalance = account?.balance ?? 0;
@@ -108,7 +104,7 @@ const getAccountBalance = async (accountId: string) => {
   });
 
   if (!account) {
-    throw new NotFoundError("Account not found");
+    throw new NotFoundError('Account not found');
   }
 
   return account.balance;

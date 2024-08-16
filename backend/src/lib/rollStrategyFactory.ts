@@ -1,14 +1,14 @@
-import { computeRollResult, getRandomFruit } from "../utils";
+import { computeRollResult, getRandomFruit } from '../utils';
 
 interface RollStrategy {
-  roll(): { rollResult: string[], winCost: number };
+  roll(): { rollResult: string[]; winCost: number };
 }
 
 export class HighBalanceStrategy implements RollStrategy {
-  roll(): { rollResult: string[], winCost: number } {
+  roll(): { rollResult: string[]; winCost: number } {
     let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     let winCost = computeRollResult(rollResult);
-    
+
     const chance = 60;
     const shouldRollAgain = Math.random() * 100 <= chance;
 
@@ -22,7 +22,7 @@ export class HighBalanceStrategy implements RollStrategy {
 }
 
 export class MediumBalanceStrategy implements RollStrategy {
-  roll(): { rollResult: string[], winCost: number } {
+  roll(): { rollResult: string[]; winCost: number } {
     let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     let winCost = computeRollResult(rollResult);
 
@@ -39,7 +39,7 @@ export class MediumBalanceStrategy implements RollStrategy {
 }
 
 export class LowBalanceStrategy implements RollStrategy {
-  roll(): { rollResult: string[], winCost: number } {
+  roll(): { rollResult: string[]; winCost: number } {
     const rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     const winCost = computeRollResult(rollResult);
 
@@ -58,4 +58,3 @@ export default class RollStrategyFactory {
     }
   }
 }
-

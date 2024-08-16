@@ -1,0 +1,21 @@
+.fruit {
+  position: relative;
+  top: 38px;
+  padding: 16px 0;
+  font-weight: bold; /* Optional: make the text bold */
+  background: linear-gradient(45deg, #ffd700, #ffa500, #ffc300, #ffd700);
+  text-align: center;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.fruitContainer {
+  position: relative;
+}
+
+.desiredSlot {
+  top: 560px;
+  transition: top;
+}

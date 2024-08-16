@@ -77,36 +77,22 @@ describe('Routes', () => {
           balance: 100,
         },
       });
-    
+
       await prisma.session.create({
         data: {
           account: { connect: { id: 'test-account' } },
           balance: 10,
         },
       });
-    
+
       const res = await request(app).get('/accounts/test-account');
-    
+
       expect(res.statusCode).toBe(200);
       expect(res.body).toEqual({
         id: 'test-account',
-        sessionBalance: 10, 
+        sessionBalance: 10,
         accountBalance: 100,
       });
-    });
-
-    it('should return error if no session exists', async () => {
-      await prisma.account.create({
-        data: {
-          id: 'test-account',
-          balance: 100,
-        },
-      });
-
-      const res = await request(app).get('/accounts/test-account');
-
-      expect(res.statusCode).toBe(404);
-      expect(res.body.error).toBe('No active session found');
     });
   });
 
@@ -141,7 +127,7 @@ describe('Routes', () => {
         },
       });
 
-      const session = await prisma.session.create({
+      await prisma.session.create({
         data: {
           accountId: account.id,
           balance: 0,
@@ -164,7 +150,7 @@ describe('Routes', () => {
         },
       });
 
-      const session = await prisma.session.create({
+      await prisma.session.create({
         data: {
           accountId: account.id,
           balance: 50,

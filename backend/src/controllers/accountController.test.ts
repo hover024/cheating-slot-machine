@@ -128,14 +128,14 @@ describe('Account Controller', () => {
           balance: 100,
         },
       });
-    
+
       const session = await prisma.session.create({
         data: {
           account: { connect: { id: account.id } },
           balance: 0,
         },
       });
-    
+
       await expect(roll(session.id, session.balance)).rejects.toThrow(
         BadRequestError
       );
@@ -183,12 +183,6 @@ describe('Account Controller', () => {
         sessionBalance: 50,
         accountBalance: 50,
       });
-    });
-
-    it('should throw an error if session does not exist', async () => {
-      const account = await createAccount('test-account', 100);
-
-      await expect(getAccount(account.id)).rejects.toThrow(NotFoundError);
     });
   });
 });

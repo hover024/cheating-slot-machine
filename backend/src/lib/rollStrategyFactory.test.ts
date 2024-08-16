@@ -1,4 +1,8 @@
-import RollStrategyFactory, { LowBalanceStrategy, MediumBalanceStrategy, HighBalanceStrategy } from './rollStrategyFactory';
+import RollStrategyFactory, {
+  LowBalanceStrategy,
+  MediumBalanceStrategy,
+  HighBalanceStrategy,
+} from './rollStrategyFactory';
 
 describe('RollStrategyFactory', () => {
   describe('get', () => {
@@ -22,7 +26,7 @@ describe('RollStrategyFactory', () => {
     it('should return a roll result without re-roll', () => {
       const strategy = new LowBalanceStrategy();
       const { rollResult, winCost } = strategy.roll();
-      
+
       expect(rollResult).toHaveLength(3);
       expect(typeof winCost).toBe('number');
     });
@@ -32,7 +36,7 @@ describe('RollStrategyFactory', () => {
     it('should return a roll result and potentially re-roll', () => {
       const strategy = new MediumBalanceStrategy();
       const { rollResult, winCost } = strategy.roll();
-      
+
       expect(rollResult).toHaveLength(3);
       expect(typeof winCost).toBe('number');
     });
@@ -42,7 +46,7 @@ describe('RollStrategyFactory', () => {
     it('should return a roll result and potentially re-roll', () => {
       const strategy = new HighBalanceStrategy();
       const { rollResult, winCost } = strategy.roll();
-      
+
       expect(rollResult).toHaveLength(3);
       expect(typeof winCost).toBe('number');
     });

@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{ts,tsx,css,scss,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,css,scss,js,json,md}\""
+  }
+}
