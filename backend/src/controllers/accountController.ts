@@ -1,24 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-import { computeRollResult, getRandomFruit } from '../utils';
+import RollStrategyFactory from '../lib/rollStrategyFactory';
 
 const prisma = new PrismaClient();
 
 export const roll = async (sessionId: number, balance: number) => {
-  let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-  let winCost = computeRollResult(rollResult);
   let newBalance = balance - 1;
 
-  if (winCost && balance > 40) {
-    const chance = balance > 60 ? 60 : 30;
-    const shouldRollAgain = Math.random() * 100 <= chance;
+  const rollStrategy = RollStrategyFactory.get(balance);
+  const { rollResult, winCost } = rollStrategy.roll();
 
-    if (shouldRollAgain) {
-      rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-      winCost = computeRollResult(rollResult);
-    }
-
-    newBalance += winCost;
-  }
+  newBalance += winCost;
 
   const updatedSession = await prisma.session.update({
     where: { id: sessionId },
