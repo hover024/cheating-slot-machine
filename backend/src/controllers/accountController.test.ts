@@ -6,6 +6,7 @@ import {
   createSession,
   createAccount,
 } from './accountController';
+import { BadRequestError, NotFoundError } from '../lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -73,17 +74,23 @@ describe('Account Controller', () => {
       expect(sessionInDb?.balance).toBe(50);
     });
 
-    it('should return error if balance exceeds account balance', async () => {
+    it('should throw an error if balance exceeds account balance', async () => {
       await createAccount('test-account', 50);
 
-      const result = await createSession('test-account', 100);
-
-      expect(result).toEqual({ error: "can't allocate this amount" });
+      await expect(createSession('test-account', 100)).rejects.toThrow(
+        BadRequestError
+      );
 
       const sessionInDb = await prisma.session.findFirst({
         where: { accountId: 'test-account' },
       });
       expect(sessionInDb).toBeNull();
+    });
+
+    it('should throw an error if account does not exist', async () => {
+      await expect(createSession('non-existent-account', 50)).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -113,6 +120,26 @@ describe('Account Controller', () => {
       });
       expect(sessionInDb?.balance).toBe(result.newBalance);
     });
+
+    it('should throw an error if balance is insufficient', async () => {
+      const account = await prisma.account.create({
+        data: {
+          id: 'test-account',
+          balance: 100,
+        },
+      });
+    
+      const session = await prisma.session.create({
+        data: {
+          account: { connect: { id: account.id } },
+          balance: 0,
+        },
+      });
+    
+      await expect(roll(session.id, session.balance)).rejects.toThrow(
+        BadRequestError
+      );
+    });
   });
 
   describe('cashout', () => {
@@ -120,7 +147,12 @@ describe('Account Controller', () => {
       const account = await createAccount('test-account', 100);
       const session = await createSession(account.id, 50);
 
-      const result = await cashout(account.id, session.sessionId as number, account.balance, session.sessionBalance as number);
+      const result = await cashout(
+        account.id,
+        session.sessionId as number,
+        account.balance,
+        session.sessionBalance as number
+      );
 
       expect(result.balance).toBe(150);
 
@@ -133,6 +165,30 @@ describe('Account Controller', () => {
         where: { id: session.sessionId },
       });
       expect(sessionInDb).toBeNull();
+    });
+  });
+
+  describe('getAccount', () => {
+    it('should return account and session balances if session exists', async () => {
+      const account = await createAccount('test-account', 100);
+      const session = await createSession(account.id, 50);
+
+      const result = await getAccount(account.id, {
+        id: session.sessionId as number,
+        balance: session.sessionBalance as number,
+      });
+
+      expect(result).toEqual({
+        id: 'test-account',
+        sessionBalance: 50,
+        accountBalance: 50,
+      });
+    });
+
+    it('should throw an error if session does not exist', async () => {
+      const account = await createAccount('test-account', 100);
+
+      await expect(getAccount(account.id)).rejects.toThrow(NotFoundError);
     });
   });
 });

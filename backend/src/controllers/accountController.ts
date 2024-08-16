@@ -1,11 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import RollStrategyFactory from '../lib/rollStrategyFactory';
+import { BadRequestError, NotFoundError } from '../lib/errors';
 
 const prisma = new PrismaClient();
 
 export const roll = async (sessionId: number, balance: number) => {
-  let newBalance = balance - 1;
+  if (balance <= 0) {
+    throw new BadRequestError("Insufficient balance");
+  }
 
+  let newBalance = balance - 1;
   const rollStrategy = RollStrategyFactory.get(balance);
   const { rollResult, winCost } = rollStrategy.roll();
 
@@ -22,7 +26,12 @@ export const roll = async (sessionId: number, balance: number) => {
   };
 };
 
-export const cashout = async (accountId: string, sessionId: number, accountBalance: number, sessionBalance: number) => {
+export const cashout = async (
+  accountId: string,
+  sessionId: number,
+  accountBalance: number,
+  sessionBalance: number
+) => {
   const updatedAccount = await prisma.account.update({
     where: { id: accountId },
     data: { balance: accountBalance + sessionBalance },
@@ -35,9 +44,12 @@ export const cashout = async (accountId: string, sessionId: number, accountBalan
   return updatedAccount;
 };
 
-export const getAccount = async (accountId: string, session?: { id: number, balance: number }) => {
+export const getAccount = async (
+  accountId: string,
+  session?: { id: number; balance: number }
+) => {
   if (!session) {
-    return { error: "no session created" };
+    throw new NotFoundError("No active session found");
   }
 
   return {
@@ -49,10 +61,15 @@ export const getAccount = async (accountId: string, session?: { id: number, bala
 
 export const createSession = async (accountId: string, balance?: number) => {
   const account = await prisma.account.findUnique({ where: { id: accountId } });
+
+  if (!account) {
+    throw new NotFoundError("Account not found");
+  }
+
   const accountBalance = account?.balance ?? 0;
 
   if (balance! > accountBalance) {
-    return { error: "can't allocate this amount" };
+    throw new BadRequestError("Can't allocate this amount");
   }
 
   const newSession = await prisma.session.create({
@@ -89,5 +106,10 @@ const getAccountBalance = async (accountId: string) => {
   const account = await prisma.account.findUnique({
     where: { id: accountId },
   });
-  return account?.balance ?? 0;
+
+  if (!account) {
+    throw new NotFoundError("Account not found");
+  }
+
+  return account.balance;
 };

@@ -1,11 +1,10 @@
-import { PrismaClient, Account, Session } from '@prisma/client';
 import cors from 'cors';
 import express from 'express';
 import {
   validateAccountId,
   validateActiveSession,
   validateSufficientBalance,
-} from './validation';
+} from './middlewares/validation';
 import {
   roll,
   cashout,
@@ -13,76 +12,85 @@ import {
   createSession,
   createAccount,
 } from './controllers/accountController';
+import { errorHandler } from './middlewares/errorHandler';
+import { BadRequestError } from './lib/errors';
 
-const prisma = new PrismaClient();
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-
-declare module 'express-serve-static-core' {
-  interface Request {
-    account?: Account & { session?: Session };
-    session?: Session;
-  }
-}
 
 app.post(
   `/roll/:id`,
   validateAccountId,
   validateActiveSession,
   validateSufficientBalance,
-  async (req, res) => {
-    const result = await roll(req.session!.id, req.session!.balance);
-    res.send(result);
+  async (req, res, next) => {
+    try {
+      const result = await roll(req.session!.id, req.session!.balance);
+      res.send(result);
+    } catch (error) {
+      next(error);
+    }
   }
 );
 
-app.post(`/cashout/:id`, validateAccountId, validateActiveSession, async (req, res) => {
-  const result = await cashout(req.account!.id, req.session?.id as number, req.account!.balance, req.session!.balance);
-  res.send(result);
-});
-
-app.get(`/accounts/:id`, validateAccountId, async (req, res) => {
-  const result = await getAccount(req.account!.id, req.account!.session);
-  if (result.error) {
-    return res.status(412).send(result);
+app.post(
+  `/cashout/:id`,
+  validateAccountId,
+  validateActiveSession,
+  async (req, res, next) => {
+    try {
+      const result = await cashout(
+        req.account!.id,
+        req.session?.id as number,
+        req.account!.balance,
+        req.session!.balance
+      );
+      res.send(result);
+    } catch (error) {
+      next(error);
+    }
   }
-  res.json(result);
-});
+);
 
-app.post(`/account/:id/session`, validateAccountId, async (req, res) => {
-  if (req.account!.session) {
-    return res.status(400).send({
-      error: "session already exists",
-    });
-  }
-
+app.get(`/accounts/:id`, validateAccountId, async (req, res, next) => {
   try {
-    const result = await createSession(req.account!.id, req.body?.balance);
+    const result = await getAccount(req.account!.id, req.account!.session);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
 
-    if (result.error) {
-      return res.status(400).send(result);
+app.post(`/account/:id/session`, validateAccountId, async (req, res, next) => {
+  try {
+    if (req.account!.session) {
+      throw new BadRequestError('Session already exists');
     }
 
+    const result = await createSession(req.account!.id, req.body?.balance);
+
     res.status(201).json(result);
-  } catch (error: any) {
-    console.error("Error creating session:", error);
-
-    res.status(500).send({
-      error: "An unexpected error occurred.",
-    });
+  } catch (error) {
+    next(error);
   }
 });
 
-app.post(`/accounts`, async (req, res) => {
-  const { id, balance } = req.body;
-  if (!id) {
-    return res.status(412).send({ error: 'Please specify an id' });
-  }
+app.post(`/accounts`, async (req, res, next) => {
+  try {
+    const { id, balance } = req.body;
+    if (!id) {
+      throw new BadRequestError('Please specify an id');
+    }
 
-  const result = await createAccount(id, balance);
-  res.status(201).json(result);
+    const result = await createAccount(id, balance);
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
 });
+
+app.use(errorHandler);
 
 export default app;

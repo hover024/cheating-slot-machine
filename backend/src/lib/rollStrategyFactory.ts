@@ -4,7 +4,7 @@ interface RollStrategy {
   roll(): { rollResult: string[], winCost: number };
 }
 
-class HighBalanceStrategy implements RollStrategy {
+export class HighBalanceStrategy implements RollStrategy {
   roll(): { rollResult: string[], winCost: number } {
     let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     let winCost = computeRollResult(rollResult);
@@ -21,7 +21,7 @@ class HighBalanceStrategy implements RollStrategy {
   }
 }
 
-class MediumBalanceStrategy implements RollStrategy {
+export class MediumBalanceStrategy implements RollStrategy {
   roll(): { rollResult: string[], winCost: number } {
     let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     let winCost = computeRollResult(rollResult);
@@ -38,7 +38,7 @@ class MediumBalanceStrategy implements RollStrategy {
   }
 }
 
-class LowBalanceStrategy implements RollStrategy {
+export class LowBalanceStrategy implements RollStrategy {
   roll(): { rollResult: string[], winCost: number } {
     const rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     const winCost = computeRollResult(rollResult);
