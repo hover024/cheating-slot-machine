@@ -1,8 +1,18 @@
 import { PrismaClient, Account, Session } from '@prisma/client';
 import cors from 'cors';
 import express from 'express';
-import { computeRollResult, getRandomFruit } from './utils';
-import { validateAccountId, validateActiveSession, validateSufficientBalance } from './validation';
+import {
+  validateAccountId,
+  validateActiveSession,
+  validateSufficientBalance,
+} from './validation';
+import {
+  roll,
+  cashout,
+  getAccount,
+  createSession,
+  createAccount,
+} from './controllers/accountController';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -17,78 +27,61 @@ declare module 'express-serve-static-core' {
   }
 }
 
-// Роуты
-app.post(`/roll/:id`, validateAccountId, validateActiveSession, validateSufficientBalance, async (req, res) => {
-  let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-  let winCost = computeRollResult(rollResult);
-  let newBalance = req.session!.balance - 1;
-
-  if (winCost && req.session!.balance > 40) {
-    const chance = req.session!.balance > 60 ? 60 : 30;
-    const shouldRollAgain = Math.random() * 100 <= chance;
-
-    if (shouldRollAgain) {
-      rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-      winCost = computeRollResult(rollResult);
-    }
-
-    newBalance += winCost;
+app.post(
+  `/roll/:id`,
+  validateAccountId,
+  validateActiveSession,
+  validateSufficientBalance,
+  async (req, res) => {
+    const result = await roll(req.session!.id, req.session!.balance);
+    res.send(result);
   }
-
-  const updatedSession = await prisma.session.update({
-    where: { id: req.session!.id },
-    data: { balance: newBalance },
-  });
-
-  res.send({
-    rollResult,
-    newBalance: updatedSession.balance,
-  });
-});
+);
 
 app.post(`/cashout/:id`, validateAccountId, validateActiveSession, async (req, res) => {
-  const updatedAccount = await prisma.account.update({
-    where: { id: req.account!.id },
-    data: { balance: req.account!.balance + req.session!.balance },
-  });
-
-  await prisma.session.delete({
-    where: { id: req.session!.id },
-  });
-
-  res.send(updatedAccount);
+  const result = await cashout(req.account!.id, req.session?.id as number, req.account!.balance, req.session!.balance);
+  res.send(result);
 });
 
 app.get(`/accounts/:id`, validateAccountId, async (req, res) => {
-  let session = req.account?.session as Session | undefined;
+  const result = await getAccount(req.account!.id, req.account!.session);
+  if (result.error) {
+    return res.status(412).send(result);
+  }
+  res.json(result);
+});
 
-  if (!session) {
-    session = await prisma.session.create({
-      data: {
-        account: { connect: { id: req.account!.id } },
-        balance: 10,
-      },
+app.post(`/account/:id/session`, validateAccountId, async (req, res) => {
+  if (req.account!.session) {
+    return res.status(400).send({
+      error: "session already exists",
     });
   }
 
-  res.json({
-    id: req.account!.id,
-    balance: session.balance,
-  });
+  try {
+    const result = await createSession(req.account!.id, req.body?.balance);
+
+    if (result.error) {
+      return res.status(400).send(result);
+    }
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error("Error creating session:", error);
+
+    res.status(500).send({
+      error: "An unexpected error occurred.",
+    });
+  }
 });
 
 app.post(`/accounts`, async (req, res) => {
   const { id, balance } = req.body;
   if (!id) {
-    return res.status(412).send({ error: "Please specify an id" });
+    return res.status(412).send({ error: 'Please specify an id' });
   }
 
-  const result = await prisma.account.create({
-    data: {
-      id,
-      balance: balance ?? 10,
-    },
-  });
+  const result = await createAccount(id, balance);
   res.status(201).json(result);
 });
 
