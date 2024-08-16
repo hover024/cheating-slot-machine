@@ -3,5 +3,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm i
 COPY . .
+COPY .env.expample .env
 EXPOSE 4000
 CMD npx prisma db push && npm run dev
