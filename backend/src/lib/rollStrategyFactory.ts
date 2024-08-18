@@ -1,16 +1,21 @@
 import { computeRollResult, getRandomFruit } from '../utils';
 
-interface RollStrategy {
+interface IRollStrategy {
   roll(): { rollResult: string[]; winCost: number };
 }
 
-export class HighBalanceStrategy implements RollStrategy {
+class BaseCheatingStrategy implements IRollStrategy {
+  private chanceToCheat: number;
+
+  constructor(chanceToCheat: number) {
+    this.chanceToCheat = chanceToCheat;
+  }
+
   roll(): { rollResult: string[]; winCost: number } {
     let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
     let winCost = computeRollResult(rollResult);
 
-    const chance = 60;
-    const shouldRollAgain = Math.random() * 100 <= chance;
+    const shouldRollAgain = Math.random() * 100 <= this.chanceToCheat;
 
     if (shouldRollAgain) {
       rollResult = new Array(3).fill(null).map(() => getRandomFruit());
@@ -21,34 +26,26 @@ export class HighBalanceStrategy implements RollStrategy {
   }
 }
 
-export class MediumBalanceStrategy implements RollStrategy {
-  roll(): { rollResult: string[]; winCost: number } {
-    let rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-    let winCost = computeRollResult(rollResult);
-
-    const chance = 30;
-    const shouldRollAgain = Math.random() * 100 <= chance;
-
-    if (shouldRollAgain) {
-      rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-      winCost = computeRollResult(rollResult);
-    }
-
-    return { rollResult, winCost };
+export class HighBalanceStrategy extends BaseCheatingStrategy {
+  constructor() {
+    super(60);
   }
 }
 
-export class LowBalanceStrategy implements RollStrategy {
-  roll(): { rollResult: string[]; winCost: number } {
-    const rollResult = new Array(3).fill(null).map(() => getRandomFruit());
-    const winCost = computeRollResult(rollResult);
+export class MediumBalanceStrategy extends BaseCheatingStrategy {
+  constructor() {
+    super(30);
+  }
+}
 
-    return { rollResult, winCost };
+export class LowBalanceStrategy extends BaseCheatingStrategy {
+  constructor() {
+    super(0);
   }
 }
 
 export default class RollStrategyFactory {
-  static get(balance: number): RollStrategy {
+  static get(balance: number): IRollStrategy {
     if (balance > 60) {
       return new HighBalanceStrategy();
     } else if (balance > 40 && balance <= 60) {

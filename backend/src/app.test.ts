@@ -28,7 +28,7 @@ describe('Routes', () => {
     });
   });
 
-  describe('POST /account/:id/session', () => {
+  describe('POST /accounts/:id/session', () => {
     it('should create a new session', async () => {
       await prisma.account.create({
         data: {
@@ -38,7 +38,7 @@ describe('Routes', () => {
       });
 
       const res = await request(app)
-        .post('/account/test-account/session')
+        .post('/accounts/test-account/session')
         .send({ balance: 50 });
 
       expect(res.statusCode).toBe(201);
@@ -61,7 +61,7 @@ describe('Routes', () => {
       });
 
       const res = await request(app)
-        .post('/account/test-account/session')
+        .post('/accounts/test-account/session')
         .send({ balance: 100 });
 
       expect(res.statusCode).toBe(400);

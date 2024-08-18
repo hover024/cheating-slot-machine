@@ -6,7 +6,7 @@ export const createSession = (accountId: string, balance: number) => {
     balance: number;
     createdAt: string;
     updatedAt: string;
-  }>(`http://localhost:4000/account/${accountId}/session`, {
+  }>(`http://localhost:4000/accounts/${accountId}/session`, {
     id: accountId,
     balance,
   });

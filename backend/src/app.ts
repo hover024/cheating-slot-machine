@@ -63,7 +63,7 @@ app.get(`/accounts/:id`, validateAccountId, async (req, res, next) => {
   }
 });
 
-app.post(`/account/:id/session`, validateAccountId, async (req, res, next) => {
+app.post(`/accounts/:id/session`, validateAccountId, async (req, res, next) => {
   try {
     if (req.account!.session) {
       throw new BadRequestError('Session already exists');
