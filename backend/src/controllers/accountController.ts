@@ -1,8 +1,8 @@
 import { Account, Session } from '@prisma/client';
 import RollStrategyFactory from '../lib/rollStrategyFactory';
 import { BadRequestError } from '../lib/errors';
-import { AccountRepository } from '../repositories/accountRepository';
-import { SessionRepository } from '../repositories/sessionRepository';
+import AccountRepository from '../repositories/accountRepository';
+import SessionRepository from '../repositories/sessionRepository';
 
 const accountRepository = new AccountRepository();
 const sessionRepository = new SessionRepository();

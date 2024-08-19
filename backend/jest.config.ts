@@ -5,6 +5,12 @@ const config: JestConfigWithTsJest = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  clearMocks: true,
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+    },
+  },
 };
 
 export default config;

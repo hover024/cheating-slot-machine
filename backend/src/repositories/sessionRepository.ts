@@ -7,7 +7,7 @@ export interface ISessionRepository {
   deleteSessionById(id: number): Promise<void>;
 }
 
-export class SessionRepository implements ISessionRepository {
+export default class SessionRepository implements ISessionRepository {
   private prisma = new PrismaClient();
 
   async createSession(accountId: string, balance: number): Promise<Session> {

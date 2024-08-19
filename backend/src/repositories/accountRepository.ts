@@ -6,7 +6,7 @@ export interface IAccountRepository {
   updateAccountBalance(id: string, balance: number): Promise<Account>;
 }
 
-export class AccountRepository implements IAccountRepository {
+export default class AccountRepository implements IAccountRepository {
   private prisma = new PrismaClient();
 
   async createAccount(id: string, balance: number): Promise<Account> {
