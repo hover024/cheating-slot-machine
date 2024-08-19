@@ -27,7 +27,7 @@ app.post(
   validateSufficientBalance,
   async (req, res, next) => {
     try {
-      const result = await roll(req.session!.id, req.session!.balance);
+      const result = await roll(req.session!);
       res.send(result);
     } catch (error) {
       next(error);
@@ -41,12 +41,7 @@ app.post(
   validateActiveSession,
   async (req, res, next) => {
     try {
-      const result = await cashout(
-        req.account!.id,
-        req.session?.id as number,
-        req.account!.balance,
-        req.session!.balance
-      );
+      const result = await cashout(req.account!, req.session!);
       res.send(result);
     } catch (error) {
       next(error);
@@ -56,7 +51,7 @@ app.post(
 
 app.get(`/accounts/:id`, validateAccountId, async (req, res, next) => {
   try {
-    const result = await getAccount(req.account!.id, req.account!.session);
+    const result = await getAccount(req.account!, req.account!.session);
     res.json(result);
   } catch (error) {
     next(error);
@@ -69,7 +64,7 @@ app.post(`/accounts/:id/session`, validateAccountId, async (req, res, next) => {
       throw new BadRequestError('Session already exists');
     }
 
-    const result = await createSession(req.account!.id, req.body?.balance);
+    const result = await createSession(req.account!, req.body?.balance);
 
     res.status(201).json(result);
   } catch (error) {

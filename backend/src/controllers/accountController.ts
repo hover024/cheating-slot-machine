@@ -1,24 +1,27 @@
-import { PrismaClient } from '@prisma/client';
+import { Account, Session } from '@prisma/client';
 import RollStrategyFactory from '../lib/rollStrategyFactory';
-import { BadRequestError, NotFoundError } from '../lib/errors';
+import { BadRequestError } from '../lib/errors';
+import { AccountRepository } from '../repositories/accountRepository';
+import { SessionRepository } from '../repositories/sessionRepository';
 
-const prisma = new PrismaClient();
+const accountRepository = new AccountRepository();
+const sessionRepository = new SessionRepository();
 
-export const roll = async (sessionId: number, balance: number) => {
-  if (balance <= 0) {
+export const roll = async (session: Session) => {
+  if (session.balance <= 0) {
     throw new BadRequestError('Insufficient balance');
   }
 
-  let newBalance = balance - 1;
-  const rollStrategy = RollStrategyFactory.get(balance);
+  let newBalance = session.balance - 1;
+  const rollStrategy = RollStrategyFactory.get(session.balance);
   const { rollResult, winCost } = rollStrategy.roll();
 
   newBalance += winCost;
 
-  const updatedSession = await prisma.session.update({
-    where: { id: sessionId },
-    data: { balance: newBalance },
-  });
+  const updatedSession = await sessionRepository.updateSessionBalance(
+    session.id,
+    newBalance
+  );
 
   return {
     rollResult,
@@ -26,86 +29,50 @@ export const roll = async (sessionId: number, balance: number) => {
   };
 };
 
-export const cashout = async (
-  accountId: string,
-  sessionId: number,
-  accountBalance: number,
-  sessionBalance: number
-) => {
-  const updatedAccount = await prisma.account.update({
-    where: { id: accountId },
-    data: { balance: accountBalance + sessionBalance },
-  });
+export const cashout = async (account: Account, session: Session) => {
+  const updatedAccount = await accountRepository.updateAccountBalance(
+    account.id,
+    account.balance + session.balance
+  );
 
-  await prisma.session.delete({
-    where: { id: sessionId },
-  });
+  await sessionRepository.deleteSessionById(session.id);
 
   return updatedAccount;
 };
 
-export const getAccount = async (
-  accountId: string,
-  session?: { id: number; balance: number }
-) => {
+export const getAccount = async (account: Account, session?: Session) => {
   return {
-    id: accountId,
+    id: account.id,
     sessionBalance: session?.balance ?? 0,
-    accountBalance: await getAccountBalance(accountId),
+    accountBalance: account.balance,
   };
 };
 
-export const createSession = async (accountId: string, balance?: number) => {
-  const account = await prisma.account.findUnique({ where: { id: accountId } });
-
-  if (!account) {
-    throw new NotFoundError('Account not found');
-  }
-
-  const accountBalance = account?.balance ?? 0;
+export const createSession = async (account: Account, balance: number) => {
+  const accountBalance = account.balance;
 
   if (balance! > accountBalance) {
     throw new BadRequestError("Can't allocate this amount");
   }
 
-  const newSession = await prisma.session.create({
-    data: {
-      account: { connect: { id: accountId } },
-      balance: balance ?? accountBalance,
-    },
-  });
+  const newSession = await sessionRepository.createSession(
+    account.id,
+    balance ?? accountBalance
+  );
 
-  await prisma.account.update({
-    where: { id: accountId },
-    data: { balance: accountBalance - (balance ?? accountBalance) },
-  });
+  const updatedAccount = await accountRepository.updateAccountBalance(
+    account.id,
+    accountBalance - (balance ?? accountBalance)
+  );
 
   return {
-    accountId,
+    accountId: account.id,
     sessionId: newSession.id,
     sessionBalance: newSession.balance,
-    accountBalance: await getAccountBalance(accountId),
+    accountBalance: updatedAccount.balance,
   };
 };
 
 export const createAccount = async (id: string, balance: number = 10) => {
-  const result = await prisma.account.create({
-    data: {
-      id,
-      balance,
-    },
-  });
-  return result;
-};
-
-const getAccountBalance = async (accountId: string) => {
-  const account = await prisma.account.findUnique({
-    where: { id: accountId },
-  });
-
-  if (!account) {
-    throw new NotFoundError('Account not found');
-  }
-
-  return account.balance;
+  return accountRepository.createAccount(id, balance);
 };

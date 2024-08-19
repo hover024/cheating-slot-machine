@@ -1,7 +1,5 @@
 'use client';
-import {
-  useQuery,
-} from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { getAccount } from '../lib/get-account';
 import Main from '../pages/main';
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Account, Session } from '@prisma/client';
 import {
   roll,
   cashout,
@@ -7,181 +7,193 @@ import {
   createAccount,
 } from './accountController';
 import { BadRequestError, NotFoundError } from '../lib/errors';
+import { IAccountRepository } from '../repositories/accountRepository';
+import { ISessionRepository } from '../repositories/sessionRepository';
 
-const prisma = new PrismaClient();
+// Моки для репозиториев
+const mockAccountRepository: jest.Mocked<IAccountRepository> = {
+  createAccount: jest.fn(),
+  findAccountById: jest.fn(),
+  updateAccountBalance: jest.fn(),
+};
+
+const mockSessionRepository: jest.Mocked<ISessionRepository> = {
+  createSession: jest.fn(),
+  findSessionById: jest.fn(),
+  updateSessionBalance: jest.fn(),
+  deleteSessionById: jest.fn(),
+};
 
 describe('Account Controller', () => {
-  beforeEach(async () => {
-    await prisma.session.deleteMany();
-    await prisma.account.deleteMany();
-  });
+  let account: Account;
+  let session: Session | null;
 
-  afterAll(async () => {
-    await prisma.$disconnect();
+  beforeEach(() => {
+    const now = new Date();
+
+    account = {
+      id: `test-account-${Date.now()}`, // Уникальный ID для каждого теста
+      balance: 100,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    session = {
+      id: 1,
+      balance: 50,
+      accountId: account.id,
+    };
+
+    jest.clearAllMocks();
+
+    // Настройка моков
+    mockAccountRepository.findAccountById.mockResolvedValue(account);
+    mockAccountRepository.createAccount.mockResolvedValue(account);
+    mockSessionRepository.findSessionById.mockResolvedValue(session);
   });
 
   describe('createAccount', () => {
     it('should create a new account with provided id and balance', async () => {
-      const result = await createAccount('test-account', 100);
+      const result = await createAccount(account.id, 100);
 
       expect(result).toEqual(
-        expect.objectContaining({ id: 'test-account', balance: 100 })
+        expect.objectContaining({ id: account.id, balance: 100 })
       );
-
-      const accountInDb = await prisma.account.findUnique({
-        where: { id: 'test-account' },
-      });
-      expect(accountInDb).toBeTruthy();
+      expect(mockAccountRepository.createAccount).toHaveBeenCalledWith(
+        account.id,
+        100
+      );
     });
 
     it('should create a new account with default balance if no balance provided', async () => {
-      const result = await createAccount('test-account');
+      account.balance = 10;
+      mockAccountRepository.createAccount.mockResolvedValue(account);
+
+      const result = await createAccount(account.id);
 
       expect(result).toEqual(
-        expect.objectContaining({ id: 'test-account', balance: 10 })
+        expect.objectContaining({ id: account.id, balance: 10 })
       );
-
-      const accountInDb = await prisma.account.findUnique({
-        where: { id: 'test-account' },
-      });
-      expect(accountInDb?.balance).toBe(10);
+      expect(mockAccountRepository.createAccount).toHaveBeenCalledWith(
+        account.id,
+        10
+      );
     });
   });
 
   describe('createSession', () => {
     it('should create a new session and update account balance', async () => {
-      await createAccount('test-account', 100);
+      mockSessionRepository.createSession.mockResolvedValue(session!);
+      mockAccountRepository.updateAccountBalance.mockResolvedValue({
+        ...account,
+        balance: 50,
+      });
 
-      const result = await createSession('test-account', 50);
+      const result = await createSession(account, 50);
 
       expect(result).toEqual(
         expect.objectContaining({
-          accountId: 'test-account',
-          sessionId: expect.any(Number),
+          accountId: account.id,
+          sessionId: 1,
           sessionBalance: 50,
           accountBalance: 50,
         })
       );
 
-      const accountInDb = await prisma.account.findUnique({
-        where: { id: 'test-account' },
-      });
-      expect(accountInDb?.balance).toBe(50);
-
-      const sessionInDb = await prisma.session.findFirst({
-        where: { accountId: 'test-account' },
-      });
-      expect(sessionInDb?.balance).toBe(50);
+      expect(mockSessionRepository.createSession).toHaveBeenCalledWith(
+        account.id,
+        50
+      );
+      expect(mockAccountRepository.updateAccountBalance).toHaveBeenCalledWith(
+        account.id,
+        50
+      );
     });
 
     it('should throw an error if balance exceeds account balance', async () => {
-      await createAccount('test-account', 50);
-
-      await expect(createSession('test-account', 100)).rejects.toThrow(
+      await expect(createSession(account, 150)).rejects.toThrow(
         BadRequestError
       );
 
-      const sessionInDb = await prisma.session.findFirst({
-        where: { accountId: 'test-account' },
-      });
-      expect(sessionInDb).toBeNull();
+      expect(mockSessionRepository.createSession).not.toHaveBeenCalled();
+      expect(mockAccountRepository.updateAccountBalance).not.toHaveBeenCalled();
     });
 
     it('should throw an error if account does not exist', async () => {
-      await expect(createSession('non-existent-account', 50)).rejects.toThrow(
-        NotFoundError
-      );
+      mockAccountRepository.findAccountById.mockResolvedValue(null);
+
+      await expect(createSession(account, 50)).rejects.toThrow(NotFoundError);
+
+      expect(mockSessionRepository.createSession).not.toHaveBeenCalled();
+      expect(mockAccountRepository.updateAccountBalance).not.toHaveBeenCalled();
     });
   });
 
   describe('roll', () => {
     it('should return roll result and update balance', async () => {
-      await prisma.account.create({
-        data: {
-          id: 'test-account',
-          balance: 100,
-        },
+      mockSessionRepository.updateSessionBalance.mockResolvedValue({
+        ...session!,
+        balance: 40,
       });
 
-      const session = await prisma.session.create({
-        data: {
-          account: { connect: { id: 'test-account' } },
-          balance: 50,
-        },
-      });
-
-      const result = await roll(session.id, session.balance);
+      const result = await roll(session!);
 
       expect(result.rollResult).toBeDefined();
       expect(result.newBalance).toBeLessThan(50);
 
-      const sessionInDb = await prisma.session.findUnique({
-        where: { id: session.id },
-      });
-      expect(sessionInDb?.balance).toBe(result.newBalance);
+      expect(mockSessionRepository.updateSessionBalance).toHaveBeenCalledWith(
+        session!.id,
+        expect.any(Number)
+      );
     });
 
     it('should throw an error if balance is insufficient', async () => {
-      const account = await prisma.account.create({
-        data: {
-          id: 'test-account',
-          balance: 100,
-        },
-      });
+      session!.balance = 0;
 
-      const session = await prisma.session.create({
-        data: {
-          account: { connect: { id: account.id } },
-          balance: 0,
-        },
-      });
+      await expect(roll(session!)).rejects.toThrow(BadRequestError);
 
-      await expect(roll(session.id, session.balance)).rejects.toThrow(
-        BadRequestError
-      );
+      expect(mockSessionRepository.updateSessionBalance).not.toHaveBeenCalled();
     });
   });
 
   describe('cashout', () => {
     it('should cash out session balance and update account balance', async () => {
-      const account = await createAccount('test-account', 100);
-      const session = await createSession(account.id, 50);
+      mockAccountRepository.updateAccountBalance.mockResolvedValue({
+        ...account,
+        balance: 150,
+      });
 
-      const result = await cashout(
-        account.id,
-        session.sessionId as number,
-        account.balance,
-        session.sessionBalance as number
-      );
+      const result = await cashout(account, session!);
 
       expect(result.balance).toBe(150);
-
-      const accountInDb = await prisma.account.findUnique({
-        where: { id: account.id },
-      });
-      expect(accountInDb?.balance).toBe(150);
-
-      const sessionInDb = await prisma.session.findUnique({
-        where: { id: session.sessionId },
-      });
-      expect(sessionInDb).toBeNull();
+      expect(mockAccountRepository.updateAccountBalance).toHaveBeenCalledWith(
+        account.id,
+        150
+      );
+      expect(mockSessionRepository.deleteSessionById).toHaveBeenCalledWith(1);
     });
   });
 
   describe('getAccount', () => {
     it('should return account and session balances if session exists', async () => {
-      const account = await createAccount('test-account', 100);
-      const session = await createSession(account.id, 50);
-
-      const result = await getAccount(account.id, {
-        id: session.sessionId as number,
-        balance: session.sessionBalance as number,
-      });
+      const result = await getAccount(account, session!);
 
       expect(result).toEqual({
-        id: 'test-account',
+        id: account.id,
         sessionBalance: 50,
-        accountBalance: 50,
+        accountBalance: 100,
+      });
+    });
+
+    it('should return account balance and zero session balance if session does not exist', async () => {
+      session = null;
+
+      const result = await getAccount(account);
+
+      expect(result).toEqual({
+        id: account.id,
+        sessionBalance: 0,
+        accountBalance: 100,
       });
     });
   });
