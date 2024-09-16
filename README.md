@@ -60,6 +60,3 @@ There is a CASH OUT button on the screen, but there's a twist there as well.
 Please organize, design, test, and document your code as if it were going into production.
 Ideally, you should work with Git and provide the solution as a link to the repository on GitHub. Please make sure your implementation lives on the `main` branch.
 
-All the best and happy coding,
-
-The Pricenow Team
